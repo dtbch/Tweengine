@@ -1,0 +1,7 @@
+Consumer Key (API Key)  qS95rvZodUgn2g6FywsolBvhQ
+Consumer Secret (API Secret)  2fclwgsOi8Sw1CgWESFq0RnF75gVEG6B3bGIyzibTjXviw8huM
+Access Token  700767925737656321-rXt73ZjHzXM8k9EMM8CgI0c0CXCaYiL
+Access Token Secret RtggJpUh2ZVkdbskj08FiNqQfON7L51g9sXvCVuN2v3Cw
+Access Level  Read and write
+Owner DT111314
+Owner ID  700767925737656321
