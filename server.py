@@ -133,6 +133,33 @@ class Server:
 				print ("File "+file_requested+" sent successfully!")
 				print ("Closing connection with client")
 				conn.close()
+			else:
+				now_time = int(time.time())
+				conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy')
+				cur = conndb.cursor()
+				cur.execute("select * from coordinates where time>=%s and time<=%s", (now_time-30,now_time))
+				data = cur.fetchall()
+				# print("data: ", data)
+				cur.close()
+				conndb.commit()
+				conndb.close()
+				length = len(data)
+				string = ""
+				if length>0:
+					string += "["
+					for i in range(0,length):
+						string += '{"latitude":"'+data[i][0]+'", "longitude":"'+data[i][1]+'"},';
+						if i==length-1:
+							string = string[:-1]
+							string += "]"
+				message = bytes(string, 'UTF-8')
+				response_headers = self._gen_headers( 200)
+				server_response = response_headers.encode()
+				server_response += message
+				print("server_response: " + server_response.decode("UTF-8"))
+				conn.send(server_response)
+				print("Closing connection with client")
+				conn.close()
 
 def graceful_shutdown(sig, dummy):
 	s.shutdown()

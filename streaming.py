@@ -24,12 +24,12 @@ class StdOutListener(StreamListener):
     def on_data(self, status):
         data = json.loads(status)
         if data.get('coordinates'):
-            latitude = data.get('coordinates').get('coordinates')[0]
-            longitude = data.get('coordinates').get('coordinates')[1]
+            longitude = data.get('coordinates').get('coordinates')[0]
+            latitude = data.get('coordinates').get('coordinates')[1]
             time = int(int(data.get('timestamp_ms'))/1000)
-            print ("time: ",time)
-            print ("latitude: ",latitude)
-            print ("longitude: ",longitude)
+            # print ("time: ",time)
+            # print ("latitude: ",latitude)
+            # print ("longitude: ",longitude)
             conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy')
             cur = conndb.cursor()
             cur.execute("insert into coordinates(latitude, longitude, time) values(%s,%s,%s)", (latitude, longitude, int(time)))

@@ -2,131 +2,103 @@
 <html>
 <head>
 <script src="http://maps.googleapis.com/maps/api/js"></script>
-<script src="http://maps.google.com/maps/api/js?sensor=false"></script>
+<!-- <script src="http://maps.google.com/maps/api/js?sensor=false"></script> -->
 <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.0.min.js"></script>
 </head>
 
 <body>
 <!-- <div id="googleMap" style="width:500px;height:380px;"></div> -->
-<div id="googleMap" style="width:1000px;height: 500px"></div>
+<div id="googleMap" style="width:1300px;height: 600px"></div>
 <p id="location"></p>
 
 <script>
   var x = document.getElementById("location");
-  var la = 0;
-  var lo = 0;
-
-
+  var map;
+  var locations = [];
+  var markers = [];
   $(document).ready(function(){
-    
-    if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(showPosition);
-      } else { 
-          x.innerHTML = "Geolocation is not supported by this browser.";
-      }
+      openmap();
+      setInterval(function(){ locationRequest(); }, 3000);
+      // locationRequest();
   })
 
-  function showPosition(position) {
-    la = position.coords.latitude;
-    lo = position.coords.longitude; 
-    x.innerHTML = "Latitude: " + la + "<br>Longitude: " + lo;
-    initialize();
+  function locationRequest(){
+    var xhttp = new XMLHttpRequest();
+    url = "nothing";
+    xhttp.open("SIGNUP", url, true);
+    xhttp.onreadystatechange = function(){
+      if(xhttp.readyState==4&&xhttp.status==200){
+        text = xhttp.responseText;
+        obj = JSON.parse(text);
+        length = Object.keys(obj).length;
+        for(var i=0; i<length; i++){
+          locations[i] = [obj[i].latitude, obj[i].longitude];
+        }
+        markmap();
+      }
+    }
+    xhttp.send(null); 
   }
 
-  function initialize()
+  function openmap()
   {
-    x.innerHTML = "la: " + la + " lo: " + lo;
-
-    var locations = [
-      ['<h4>'+ "Your Location" + '<br/>' + "Your Location" + '</h4>', la, lo],
-      ['<h4>'+ "Your Destination" + '<br/>' + "Your Destination" + '</h4>', 45.675482, -64.335938],
-      ['<h4>'+ "Home" + '<br/>' + "Home" + '</h4>', 39.958799, 116.543216]
-      // ['<h4>'+ obj[2].name + '<br/>' + obj[2].address + '</h4>', obj[2].latitude, obj[2].longitude],
-      // ['<h4>'+ obj[3].name + '<br/>' + obj[3].address + '</h4>', obj[3].latitude, obj[3].longitude],
-      // ['<h4>'+ obj[4].name + '<br/>' + obj[4].address + '</h4>', obj[4].latitude, obj[4].longitude],
-      // ['<h4>'+ obj[5].name + '<br/>' + obj[5].address + '</h4>', obj[5].latitude, obj[5].longitude],
-      // ['<h4>'+ obj[6].name + '<br/>' + obj[6].address + '</h4>', obj[6].latitude, obj[6].longitude],
-      // ['<h4>'+ obj[7].name + '<br/>' + obj[7].address + '</h4>', obj[7].latitude, obj[7].longitude]
-      // //['<h4>'+ obj[8].name + '</h4>', obj[8].latitude, obj[8].longitude],
-      // //['<h4>'+ obj[9].name + '</h4>', obj[9].latitude, obj[9].longitude]
-    ];
-    var myCenter=new google.maps.LatLng(la,lo);
+    var myCenter=new google.maps.LatLng(41.079351,-73.125000);
     var mapProp = {
       center: myCenter,
-      zoom:5,
+      zoom:2,
       mapTypeId: google.maps.MapTypeId.ROADMAP
       };
 
-    var map = new google.maps.Map(document.getElementById("googleMap"),mapProp);
+    map = new google.maps.Map(document.getElementById("googleMap"),mapProp);
+  }
+  
 
-    // var marker = new google.maps.Marker({
-    //   position: myCenter,
-    //   title:'Click to zoom'
-    //   });
-
-    // marker.setMap(map);
-
-
-
+  function markmap()
+  {
     var iconURLPrefix = 'http://maps.google.com/mapfiles/ms/icons/';
 						    
-    var icons = [
-		// iconURLPrefix + 'red-dot.png',
-		// iconURLPrefix + 'orange-dot.png',
-		// iconURLPrefix + 'yellow-dot.png',
-		// iconURLPrefix + 'green-dot.png',
-		// iconURLPrefix + 'ltblue-dot.png',
-		// iconURLPrefix + 'blue-dot.png',
-		// iconURLPrefix + 'purple-dot.png',
-		// iconURLPrefix + 'pink-dot.png'    	
-		'https://maps.gstatic.com/intl/en_us/mapfiles/markers2/measle_blue.png'				      
-    ]
-    var iconsLength = icons.length;
-
-    var markers = new Array();
-    var iconCounter = 0;
-						    
+    var icons = 'https://maps.gstatic.com/intl/en_us/mapfiles/markers2/measle_blue.png';			      
+    
+    var oldMarkers = [];
+    for (var j = 0; j<markers.length; j++){
+      oldMarkers.push(markers[j]);
+    }
     // Add the markers and infowindows to the map
     for (var i = 0; i < locations.length; i++) {  
-    	if(i==0){
-    		var marker = new google.maps.Marker({
-				position: new google.maps.LatLng(locations[i][1], locations[i][2]),
-				animation: google.maps.Animation.BOUNCE,
-				map: map,
-				icon: icons[iconCounter]
-				});
-    	}
-
-    	else{
-    		var marker = new google.maps.Marker({
-				position: new google.maps.LatLng(locations[i][1], locations[i][2]),
-				map: map,
-				icon: icons[iconCounter]
-				});
-    	}
-		
-
-		markers.push(marker);
-
-		google.maps.event.addListener(marker, 'click', (function(marker, i) {
-		return function() {
-		  infowindow.setContent(locations[i][0]);
-		  infowindow.open(map, marker);
-		}
-		})(marker, i));
-
-		iconCounter++;
-		// We only have a limited number of possible icon colors, so we may have to restart the counter
-		if(iconCounter >= iconsLength) {
-			iconCounter = 0;
-		}
+  		var marker = new google.maps.Marker({
+			position: new google.maps.LatLng(locations[i][0], locations[i][1]),
+			// animation: google.maps.Animation.BOUNCE,
+			map: map,
+			icon: icons
+			});
+		  markers.push(marker);
+      // marker.setMap(map);
     }
-    var bounds = new google.maps.LatLngBounds();
-	for (var i = 0; i < markers.length; i++) {  
-		bounds.extend(markers[i].position);
-		}
-	map.fitBounds(bounds);
+    
+    for (var k = 0; k<oldMarkers.length; k++){
+      oldMarkers[k].setMap(null);
+    }
+    
+    
+
+
+    // alert(oldMarkers)
+    // for(var i=0; i<oldMarkers.length; i++){
+    //   oldMarkers[i].setMap(null);
+    //   // oldMarkers.length = 0;
+    // }
+    // for(var i=0; i<markers.length; i++){
+    //   markers[i].setMap(map);
+    //   oldMarkers[i] = markers[i];
+    //   // markers[i].setMap(null);
+    // }
+  //   var bounds = new google.maps.LatLngBounds();
+  //   for (var i = 0; i < markers.length; i++) {  
+		//   bounds.extend(markers[i].position);
+		// }
+  //   map.fitBounds(bounds);
   }
+
   
 </script>
 </body>
