@@ -3,6 +3,7 @@
 import socket 
 import signal
 import time
+from time import gmtime,strftime
 import pymysql
 
 import argparse
@@ -51,7 +52,7 @@ class Server:
 			while success != 1:
 				print("Warning: Could not acquite port:", self.port, "\n")
 				print("I will try later")
-				time.sleep(10)
+				time.sleep(3)
 
 				try:
 					print("Launching HTTP server on ", self.host, ":", self.port)
@@ -134,31 +135,57 @@ class Server:
 				print ("Closing connection with client")
 				conn.close()
 			else:
-				now_time = int(time.time())
-				conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy')
-				cur = conndb.cursor()
-				cur.execute("select * from coordinates where time>=%s and time<=%s", (now_time-30,now_time))
-				data = cur.fetchall()
-				# print("data: ", data)
-				cur.close()
-				conndb.commit()
-				conndb.close()
-				length = len(data)
-				string = ""
-				if length>0:
-					string += "["
-					for i in range(0,length):
-						string += '{"latitude":"'+data[i][0]+'", "longitude":"'+data[i][1]+'"},';
-						if i==length-1:
-							string = string[:-1]
-							string += "]"
-				message = bytes(string, 'UTF-8')
-				response_headers = self._gen_headers( 200)
-				server_response = response_headers.encode()
-				server_response += message
-				print("server_response: " + server_response.decode("UTF-8"))
-				conn.send(server_response)
-				print("Closing connection with client")
+				file_requested = string.split(' ')
+				if(len(file_requested)>1):
+					file_requested = file_requested[1][1:]
+					keyword = file_requested.split('?')[0]
+					timeRange = file_requested.split('?')[1]
+					startTime = timeRange.split(',')[0]
+					endTime = timeRange.split(',')[1]
+					print("keyword: "+keyword+" startTime: "+startTime+" endTime: "+endTime)
+					if(startTime==""):						
+					# print("keyword: "+keyword+" time: "+timeRange)
+						now_time = int(time.time())
+						start_time = now_time - 30
+						nowTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_time))
+						searchStartTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))
+					# timeToCloudSearch = strftime("%Y-%m-%dT%H:%M:%SZ",gmtime())
+					# timeToMySQL = strftime("%Y-%m-%d %H:%M:%S",gmtime())
+					# print(gmtime())
+						conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
+						cur = conndb.cursor()
+						cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,nowTime))
+						data = cur.fetchall()
+					# print("data: ", data)
+						cur.close()
+						conndb.commit()
+						conndb.close()
+						length = len(data)
+						string = ""
+						if length>0:
+							string += "["
+							for i in range(0,length):
+								text = str(data[i][1]);
+								print (text)
+								if keyword!="":
+									if keyword in text:
+										string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
+										
+								else:
+									string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
+								if i==length-1:
+									if len(string)>1:
+										string = string[:-1]
+									string += "]"
+						message = bytes(string, 'UTF-8')
+					# else:
+
+						response_headers = self._gen_headers( 200)
+						server_response = response_headers.encode()
+						server_response += message
+						# print("server_response: " + server_response.decode("UTF-8"))
+						conn.send(server_response)
+					print("Closing connection with client")
 				conn.close()
 
 def graceful_shutdown(sig, dummy):
