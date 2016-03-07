@@ -1,0 +1,36 @@
+instance install:
+
+upload: scp -i "dongtao.pem" tweetEngine.zip  ec2-user@ec2-52-20-8-20.compute-1.amazonaws.com:.
+
+install unzip: sudo yum install unzip
+
+unzip files: unzip tweetEngine.zip 
+
+download get-pip.py: curl -O https://bootstrap.pypa.io/get-pip.py
+
+install pip3: sudo python3 get-pip.py
+
+get into root user: sudo su -
+
+install tweepy: pip3 install tweepy
+
+get back to ec2-user: sudo su ec2-user
+
+install mysql: sudo yum install mysql-server
+
+start mysql: sudo service mysqld start
+
+updata password for mysql: mysql> set old_passwords = 0;
+						   mysql> SET PASSWORD FOR 'root'@'localhost' = PASSWORD('111314');
+
+install pymysql: sudo su -
+				 pip3 install pymysql
+
+install boto3:   sudo su - 
+				 pip3 install boto3
+
+boto3 credencials set: $ aws configure
+					   AWS Access Key ID [None]: AKIAJ2DNKGLJPOPWDQ2Q
+					   AWS Secret Access Key [None]: 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
+                       Default region name [None]: us-east-1
+                       Default output format [None]: json

@@ -6,21 +6,25 @@
 <!-- <script src="http://maps.google.com/maps/api/js?sensor=false"></script> -->
 <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.0.min.js"></script>
 <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+
+
 </head>
 
 <body>
 <!-- <div id="googleMap" style="width:500px;height:380px;"></div> -->
-<div id="googleMap" style="width:1000px;height: 500px"></div>
-<div style="width: 500px; height: 100px">
-	<input id="startTime" type="datetime-local" name="startTime" step=1>
-	<input id="endTime" type="datetime-local" name="endTime" step=1>
+<div id="googleMap" style="width:100%;height: 500px"></div>
+<div style="width: 500px; height: 150px">
+	StartTime:<input id="startTime" type="datetime-local" name="startTime" step=2>
+	EndTime:
+	<input id="endTime" type="datetime-local" name="endTime" step=2>
 	<!-- <input id="tiemSubmit" type="submit" value="Submit"> -->
 </div>
 <!-- <div id="time" style="width:600px; height: 40px">
   <input type="range" name="points" id="slidebar" value="-50" min="-100" max="10">
 </div> -->
 <div> What Do You Want To Search: </div>
-<div id="search" style="width:500px;height:100px">
+<div id="search" style="width:500px;height:40px">
   <input type="text" id="keyword" id="keyword" value="" placeholder="keyword">
 </div>
 <div id="demo"></div>
@@ -33,6 +37,11 @@
   var map;
   var locations = [];
   var markers = [];
+  var syn;
+  var icons = 'https://storage.googleapis.com/support-kms-prod/SNP_2752125_en_v0';
+  // var icons = 'https://maps.gstatic.com/intl/en_us/mapfiles/markers2/measle_blue.png';
+
+
   $(document).ready(function(){
       openmap();
       setInterval(function(){ locationRequest(); }, 1000);
@@ -41,25 +50,35 @@
 
   function locationRequest(){
     var startTime = document.getElementById("startTime").value;
+    if(startTime.length==13)
+    	startTime += ":00:00";
+    if(startTime.length==16)
+    	startTime += ":00";
+
     
     var endTime = document.getElementById("endTime").value;
-    document.getElementById("demo2").innerHTML=endTime;
+    if(endTime.length==13)
+    	endTime += ":00:00";
+    if(endTime.length==16)
+    	endTime += ":00";
+    // document.getElementById("demo2").innerHTML=endTime;
     var keyword = document.getElementById("keyword").value;
-    document.getElementById("demo3").innerHTML=keyword;
+    // document.getElementById("demo3").innerHTML=keyword;
     var xhttp = new XMLHttpRequest();
     var url = keyword + "?" + startTime + "," + endTime;
-    document.getElementById("demo").innerHTML=url;
+    // document.getElementById("demo").innerHTML=url;
     xhttp.open("SIGNUP", url, true);
     xhttp.onreadystatechange = function(){
       if(xhttp.readyState==4&&xhttp.status==200){
         text = xhttp.responseText;
-        document.getElementById("demo1").innerHTML=text;
+        // document.getElementById("demo1").innerHTML=text;
         locations = [];
         if(text.length>0){
         	obj = JSON.parse(text);
 	        length = Object.keys(obj).length;
-	        for(var i=0; i<length; i++){
-	          locations[i] = [obj[i].latitude, obj[i].longitude];
+	        syn = obj[0].syn;
+	        for(var i=1; i<length; i++){
+	          locations[i-1] = [obj[i].latitude, obj[i].longitude];
 	        }
         }
         
@@ -72,11 +91,11 @@
 
   function openmap()
   {
-    var myCenter=new google.maps.LatLng(41.079351,-73.125000);
+    var myCenter=new google.maps.LatLng(27.488781,-1.406250);
     var mapProp = {
       center: myCenter,
       zoom:2,
-      mapTypeId: google.maps.MapTypeId.ROADMAP
+      mapTypeId: google.maps.MapTypeId.HYBRID
       };
 
     map = new google.maps.Map(document.getElementById("googleMap"),mapProp);
@@ -86,17 +105,22 @@
   function markmap()
   {
     var iconURLPrefix = 'http://maps.google.com/mapfiles/ms/icons/';
-						    
-    var icons = 'https://maps.gstatic.com/intl/en_us/mapfiles/markers2/measle_blue.png';			      
+
     
+
+    // var icons = 'https://maps.gstatic.com/intl/en_us/mapfiles/markers2/measle_blue.png';			      
+    // var icons = 'http://labs.google.com/ridefinder/images/mm_20_red.png';
     // var oldMarkers = [];
     // for (var j = 0; j<markers.length; j++){
     //   oldMarkers.push(markers[j]);
     // }
-
-    for (var k = 0; k<markers.length; k++){
-      markers[k].setMap(null);
-    }
+    if(syn=="yes"){
+	    // for (var k = 0; k<markers.length; k++){
+	    //   markers[k].setMap(null);
+	    // }
+      openmap();
+      markers = [];
+	  }
     // Add the markers and infowindows to the map
     for (var i = 0; i < locations.length; i++) {  
   		var marker = new google.maps.Marker({
@@ -108,6 +132,7 @@
 		  markers.push(marker);
       // marker.setMap(map);
     }
+    document.getElementById("demo").innerHTML = markers.length;
     
     
     

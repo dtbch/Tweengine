@@ -5,6 +5,7 @@ import signal
 import time
 from time import gmtime,strftime
 import pymysql
+import boto3
 
 import argparse
 import json
@@ -13,10 +14,18 @@ import sys
 import urllib
 import urllib.error
 from urllib.request import urlopen
-import oauth2
+# import oauth2
 
 server_type = 1
 
+cloudSearchClient = boto3.client('cloudsearch')
+
+def getEndPoint():
+    return cloudSearchClient.describe_domains()['DomainStatusList'][0]['SearchService']['Endpoint']
+
+cloudSearchDomainClient = boto3.client("cloudsearchdomain", endpoint_url = "http://" + getEndPoint())
+oldFileRequest = None
+newCursor = None
 class Server:
 
 	
@@ -24,11 +33,11 @@ class Server:
 	def __init__(self,port = 8180):		
 
 		if server_type==0:		
-			self.host = '128.122.238.51'			
-			self.databaseHost = 'websys3.stern.nyu.edu'
-			self.user = 'websysF15GB7'
-			self.password = 'websysF15GB7!!'
-			self.database = "websysF15GB7"
+			self.host = 'ec2-52-20-8-20.compute-1.amazonaws.com'			
+			self.databaseHost = 'localhost'
+			self.user = 'root'
+			self.password = '111314'
+			self.database = "tweepy"
 
 		else:
 			self.host = '127.0.0.1'
@@ -40,6 +49,7 @@ class Server:
 		self.port = port
 		self.databasePort = 3306
 		self.www_dir = 'www'
+
 
 	def activate_server(self):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -91,6 +101,10 @@ class Server:
 		return h
 
 	def _wait_for_connections(self):
+		global cloudSearchClient
+		global cloudSearchDomainClient
+		global oldFileRequest
+		global newCursor
 		while True:
 			print ("Awaiting New connection")
 			self.socket.listen(20)
@@ -143,7 +157,7 @@ class Server:
 					startTime = timeRange.split(',')[0]
 					endTime = timeRange.split(',')[1]
 					print("keyword: "+keyword+" startTime: "+startTime+" endTime: "+endTime)
-					if(startTime==""):						
+					if(startTime=="" or endTime==""):						
 					# print("keyword: "+keyword+" time: "+timeRange)
 						now_time = int(time.time())
 						start_time = now_time - 30
@@ -163,30 +177,64 @@ class Server:
 						length = len(data)
 						string = ""
 						if length>0:
-							string += "["
+							string = '[{"syn":"yes"},'
+							# string = "["
 							for i in range(0,length):
 								text = str(data[i][1]);
-								print (text)
+								# print (text)
 								if keyword!="":
 									if keyword in text:
 										string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
 										
 								else:
 									string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
-								if i==length-1:
-									if len(string)>1:
-										string = string[:-1]
-									string += "]"
+							if len(string)>1:
+								string = string[:-1]
+							string += "]"
 						message = bytes(string, 'UTF-8')
-					# else:
+					else:
+						if file_requested==oldFileRequest:
+							cursor = newCursor
+							string = '[{"syn":"no"},'
+						else:
+							cursor = "initial"
+							string = '[{"syn":"yes"},'
 
-						response_headers = self._gen_headers( 200)
-						server_response = response_headers.encode()
-						server_response += message
-						# print("server_response: " + server_response.decode("UTF-8"))
-						conn.send(server_response)
+						
+						startTime = startTime+"Z"
+						endTime = endTime+"Z"
+						query = ("(and \'" + keyword + "\' time:[\'" + startTime + "\',\'" + endTime + "\'])")
+						
+						searchResponse = cloudSearchDomainClient.search(
+							cursor = cursor,
+							queryParser = "structured",
+							query = query,
+							size = 10000)
+
+						hitRecords = searchResponse['hits']['hit']
+						newCursor = searchResponse['hits']['cursor']
+						# Get only coordinate data
+						if(len(hitRecords) != 0):
+							for record in hitRecords:
+								coordinate = record['fields']['coordinates'][0].split(",")
+								string += '{"latitude":"'+str(coordinate[0])+'", "longitude":"'+str(coordinate[1])+'"},';
+							
+						if len(string)>1:
+							string = string[:-1]
+						string += "]"
+						message = bytes(string, 'UTF-8')
+						oldFileRequest = file_requested
+						print (newCursor)
+						print (cursor)
+
+					response_headers = self._gen_headers( 200)
+					server_response = response_headers.encode()
+					server_response += message
+					# print("server_response: " + server_response.decode("UTF-8"))
+					conn.send(server_response)
 					print("Closing connection with client")
 				conn.close()
+
 
 def graceful_shutdown(sig, dummy):
 	s.shutdown()
