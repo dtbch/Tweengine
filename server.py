@@ -243,8 +243,15 @@ def graceful_shutdown(sig, dummy):
 
 signal.signal(signal.SIGINT, graceful_shutdown)
 
-print ("Starting web server")
-s = Server()
-s.activate_server()
+while True:
+	try:
+		print ("Starting web server")
+		s = Server()
+		s.activate_server()
+	except (KeyboardInterrupt, SystemExit):
+		print("Server Terminated.")
+		break
+	except Exception:
+		pass
 
 
