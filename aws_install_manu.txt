@@ -30,7 +30,7 @@ install boto3:   sudo su -
 				 pip3 install boto3
 
 boto3 credencials set: $ aws configure
-					   AWS Access Key ID [None]: AKIAJ2DNKGLJPOPWDQ2Q
-					   AWS Secret Access Key [None]: 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
+			 AWS Access Key ID [None]: 
+			 AWS Secret Access Key [None]:
                        Default region name [None]: us-east-1
                        Default output format [None]: json
