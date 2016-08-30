@@ -14,20 +14,10 @@ import sys
 import urllib
 import urllib.error
 from urllib.request import urlopen
-# import oauth2
 
 server_type = 1
-
-# cloudSearchClient = boto3.client('cloudsearch')
-
-# def getEndPoint():
-#     return cloudSearchClient.describe_domains()['DomainStatusList'][0]['SearchService']['Endpoint']
-
-# cloudSearchDomainClient = boto3.client("cloudsearchdomain", endpoint_url = "http://" + getEndPoint())
-# oldFileRequest = None
 oldTimeFlag = None
 flag = True
-# newCursor = None
 class Server:
 
 	
@@ -163,7 +153,6 @@ class Server:
 					endTime = timeRange.split(',')[1]
 					print("keyword: "+keyword+" startTime: "+startTime+" endTime: "+endTime)
 					if(startTime=="" or endTime==""):						
-					# print("keyword: "+keyword+" time: "+timeRange)
 						now_time = int(time.time())
 						start_time = now_time - 1
 						searchEndTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_time))
@@ -187,9 +176,6 @@ class Server:
 					timeFlag += searchStartTime
 					timeFlag += searchEndTime
 					print(timeFlag)
-					# timeToCloudSearch = strftime("%Y-%m-%dT%H:%M:%SZ",gmtime())
-					# timeToMySQL = strftime("%Y-%m-%d %H:%M:%S",gmtime())
-					# print(gmtime())
 					conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
 					cur = conndb.cursor()
 					cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,searchEndTime))
@@ -201,18 +187,14 @@ class Server:
 					length = len(data)
 					string = ""
 					if length>0:
-						# if file_requested==oldFileRequest:
-						# 	string = '[{"syn":"no"},'
 						if timeFlag!=oldTimeFlag:
 							if flag:
 								string = '[{"syn":"no"},'
 							else:
 								string = '[{"syn":"yes"},'
 
-							# string = "["
 							for i in range(0,length):
 								text = str(data[i][1]);
-								# print (text)
 								if keyword!="":
 									if keyword in text:
 										string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
@@ -224,45 +206,9 @@ class Server:
 							string += "]"
 							message = bytes(string, 'UTF-8')
 							oldTimeFlag = timeFlag
-					# else:
-					# 	if file_requested==oldFileRequest:
-					# 		cursor = newCursor
-					# 		string = '[{"syn":"no"},'
-					# 	else:
-					# 		cursor = "initial"
-					# 		string = '[{"syn":"yes"},'
-
-						
-					# 	startTime = startTime+"Z"
-					# 	endTime = endTime+"Z"
-					# 	query = ("(and \'" + keyword + "\' time:[\'" + startTime + "\',\'" + endTime + "\'])")
-						
-					# 	searchResponse = cloudSearchDomainClient.search(
-					# 		cursor = cursor,
-					# 		queryParser = "structured",
-					# 		query = query,
-					# 		size = 10000)
-
-					# 	hitRecords = searchResponse['hits']['hit']
-					# 	newCursor = searchResponse['hits']['cursor']
-					# 	# Get only coordinate data
-					# 	if(len(hitRecords) != 0):
-					# 		for record in hitRecords:
-					# 			coordinate = record['fields']['coordinates'][0].split(",")
-					# 			string += '{"latitude":"'+str(coordinate[0])+'", "longitude":"'+str(coordinate[1])+'"},';
-							
-					# 	if len(string)>1:
-					# 		string = string[:-1]
-					# 	string += "]"
-					# 	message = bytes(string, 'UTF-8')
-					# 	oldFileRequest = file_requested
-					# 	print (newCursor)
-					# 	print (cursor)
-
 							response_headers = self._gen_headers( 200)
 							server_response = response_headers.encode()
 							server_response += message
-							# print("server_response: " + server_response.decode("UTF-8"))
 							conn.send(server_response)
 							print("Closing connection with client")
 						conn.close()
