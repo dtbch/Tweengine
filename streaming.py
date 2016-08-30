@@ -32,75 +32,76 @@ class StdOutListener(StreamListener):
 		data = json.loads(status)
 		if data.get('coordinates'):
 			database_store(data)
-			file_store(data)
+			# file_store(data)
 		return True
 
 
 
-def file_store(data):
-	longitude = '{:f}'.format(data.get('coordinates').get('coordinates')[0])
-	latitude = '{:f}'.format(data.get('coordinates').get('coordinates')[1])
-	latlon = ""
-	latlon = latlon + str(latitude) + ',' + str(longitude);
-	times = int(int(data.get('timestamp_ms'))/1000)
-	tweetid = data.get('id_str')
-	timeToCloudSearch = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(times))
-	text = data.get('text')
-	tweetJSON = JSON_parse(latlon, timeToCloudSearch, text, tweetid)
-	file_write(tweetJSON[1:-1])
-	return True
+# def file_store(data):
+# 	longitude = '{:f}'.format(data.get('coordinates').get('coordinates')[0])
+# 	latitude = '{:f}'.format(data.get('coordinates').get('coordinates')[1])
+# 	latlon = ""
+# 	latlon = latlon + str(latitude) + ',' + str(longitude);
+# 	times = int(int(data.get('timestamp_ms'))/1000)
+# 	tweetid = data.get('id_str')
+# 	timeToCloudSearch = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(times))
+# 	text = data.get('text')
+# 	tweetJSON = JSON_parse(latlon, timeToCloudSearch, text, tweetid)
+# 	file_write(tweetJSON[1:-1])
+# 	return True
 
 
-def file_write(data):
-	global count, file
-	file.write(data)
-	if os.path.getsize(getCurrentFilename())/1024/1024>2:
-		file.write("]")
-		file_close(file)
-		count += 1
-		new_file_open()
-	else:
-		file.write(",")
+# def file_write(data):
+# 	global count, file
+# 	file.write(data)
+# 	if os.path.getsize(getCurrentFilename())/1024/1024>2:
+# 		file.write("]")
+# 		file_close(file)
+# 		count += 1
+# 		new_file_open()
+# 	else:
+# 		file.write(",")
 
-def new_file_open():																						
-	global file
-	global count
-	while os.path.isfile(getCurrentFilename()):
-		count += 1
-	file = open(getCurrentFilename(),"a")
-	file.write("[")
+# def new_file_open():																						
+# 	global file
+# 	global count
+# 	while os.path.isfile(getCurrentFilename()):
+# 		count += 1
+# 	file = open(getCurrentFilename(),"a")
+# 	file.write("[")
 
-def file_close(file):
-	file.close()
-	f = open(getCurrentFilename(), 'rb+')
-	f.seek(-1,2)
-	if(f.read==b','):
-		f.seek(-1,2)
-		f.truncate()
-		f.close()
-	f = open(getCurrentFilename(), 'a')
-	f.write("]")
-	f.close()
+# def file_close(file):
+# 	file.close()
+# 	f = open(getCurrentFilename(), 'rb+')
+# 	f.seek(-1,2)
+# 	if(f.read==b','):
+# 		f.seek(-1,2)
+# 		f.truncate()
+# 		f.close()
+# 	f = open(getCurrentFilename(), 'a')
+# 	f.write("]")
+# 	f.close()
 
-def getCurrentFilename():
-	return path + str(count) + ".json"
+# def getCurrentFilename():
+# 	return path + str(count) + ".json"
 
 
-def JSON_parse(latlon, time, text, tweetid):
-	tweetJSON = [
-		{
-			"type": "add",
-			"id": tweetid,
-			"fields": {
-				"coordinates": latlon,
-				"time": time,
-				"tweet": text
-			}
-		}
-	]
-	return json.dumps(tweetJSON)
+# def JSON_parse(latlon, time, text, tweetid):
+# 	tweetJSON = [
+# 		{
+# 			"type": "add",
+# 			"id": tweetid,
+# 			"fields": {
+# 				"coordinates": latlon,
+# 				"time": time,
+# 				"tweet": text
+# 			}
+# 		}
+# 	]
+# 	return json.dumps(tweetJSON)
 
 def database_store(data):
+	print(data)
 	longitude = '{:f}'.format(data.get('coordinates').get('coordinates')[0])
 	latitude = '{:f}'.format(data.get('coordinates').get('coordinates')[1])
 	times = int(int(data.get('timestamp_ms'))/1000)
@@ -115,7 +116,7 @@ def database_store(data):
 	return True
 
 if __name__ == '__main__':
-	new_file_open()
+	# new_file_open()
 	l = StdOutListener()
 	auth = OAuthHandler(consumer_key, consumer_secret)
 	auth.set_access_token(access_token, access_token_secret)

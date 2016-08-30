@@ -18,14 +18,16 @@ from urllib.request import urlopen
 
 server_type = 1
 
-cloudSearchClient = boto3.client('cloudsearch')
+# cloudSearchClient = boto3.client('cloudsearch')
 
-def getEndPoint():
-    return cloudSearchClient.describe_domains()['DomainStatusList'][0]['SearchService']['Endpoint']
+# def getEndPoint():
+#     return cloudSearchClient.describe_domains()['DomainStatusList'][0]['SearchService']['Endpoint']
 
-cloudSearchDomainClient = boto3.client("cloudsearchdomain", endpoint_url = "http://" + getEndPoint())
-oldFileRequest = None
-newCursor = None
+# cloudSearchDomainClient = boto3.client("cloudsearchdomain", endpoint_url = "http://" + getEndPoint())
+# oldFileRequest = None
+oldTimeFlag = None
+flag = True
+# newCursor = None
 class Server:
 
 	
@@ -105,6 +107,8 @@ class Server:
 		global cloudSearchDomainClient
 		global oldFileRequest
 		global newCursor
+		global oldTimeFlag
+		global flag
 		while True:
 			print ("Awaiting New connection")
 			self.socket.listen(20)
@@ -125,6 +129,7 @@ class Server:
 				file_requested = file_requested.split('?')[0]
 
 				if(file_requested == ''):
+					oldTimeFlag = None
 					file_requested = 'new.html'
 				try:
 					file_handler = open(file_requested,'rb')
@@ -160,24 +165,50 @@ class Server:
 					if(startTime=="" or endTime==""):						
 					# print("keyword: "+keyword+" time: "+timeRange)
 						now_time = int(time.time())
-						start_time = now_time - 30
-						nowTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_time))
+						start_time = now_time - 1
+						searchEndTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_time))
 						searchStartTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))
+						if flag!=True:
+							string = '[{"syn":"yes"}]'
+							message = bytes(string, 'UTF-8')
+							response_headers = self._gen_headers( 200)
+							server_response = response_headers.encode()
+							server_response += message
+							conn.send(server_response)
+							print("Closing connection with client")
+							conn.close()
+							flag = True
+							continue;
+					else:
+						searchEndTime = endTime
+						searchStartTime = startTime
+						flag = False
+					timeFlag = ""
+					timeFlag += searchStartTime
+					timeFlag += searchEndTime
+					print(timeFlag)
 					# timeToCloudSearch = strftime("%Y-%m-%dT%H:%M:%SZ",gmtime())
 					# timeToMySQL = strftime("%Y-%m-%d %H:%M:%S",gmtime())
 					# print(gmtime())
-						conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
-						cur = conndb.cursor()
-						cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,nowTime))
-						data = cur.fetchall()
-					# print("data: ", data)
-						cur.close()
-						conndb.commit()
-						conndb.close()
-						length = len(data)
-						string = ""
-						if length>0:
-							string = '[{"syn":"yes"},'
+					conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
+					cur = conndb.cursor()
+					cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,searchEndTime))
+					data = cur.fetchall()
+				# print("data: ", data)
+					cur.close()
+					conndb.commit()
+					conndb.close()
+					length = len(data)
+					string = ""
+					if length>0:
+						# if file_requested==oldFileRequest:
+						# 	string = '[{"syn":"no"},'
+						if timeFlag!=oldTimeFlag:
+							if flag:
+								string = '[{"syn":"no"},'
+							else:
+								string = '[{"syn":"yes"},'
+
 							# string = "["
 							for i in range(0,length):
 								text = str(data[i][1]);
@@ -191,49 +222,50 @@ class Server:
 							if len(string)>1:
 								string = string[:-1]
 							string += "]"
-						message = bytes(string, 'UTF-8')
-					else:
-						if file_requested==oldFileRequest:
-							cursor = newCursor
-							string = '[{"syn":"no"},'
-						else:
-							cursor = "initial"
-							string = '[{"syn":"yes"},'
+							message = bytes(string, 'UTF-8')
+							oldTimeFlag = timeFlag
+					# else:
+					# 	if file_requested==oldFileRequest:
+					# 		cursor = newCursor
+					# 		string = '[{"syn":"no"},'
+					# 	else:
+					# 		cursor = "initial"
+					# 		string = '[{"syn":"yes"},'
 
 						
-						startTime = startTime+"Z"
-						endTime = endTime+"Z"
-						query = ("(and \'" + keyword + "\' time:[\'" + startTime + "\',\'" + endTime + "\'])")
+					# 	startTime = startTime+"Z"
+					# 	endTime = endTime+"Z"
+					# 	query = ("(and \'" + keyword + "\' time:[\'" + startTime + "\',\'" + endTime + "\'])")
 						
-						searchResponse = cloudSearchDomainClient.search(
-							cursor = cursor,
-							queryParser = "structured",
-							query = query,
-							size = 10000)
+					# 	searchResponse = cloudSearchDomainClient.search(
+					# 		cursor = cursor,
+					# 		queryParser = "structured",
+					# 		query = query,
+					# 		size = 10000)
 
-						hitRecords = searchResponse['hits']['hit']
-						newCursor = searchResponse['hits']['cursor']
-						# Get only coordinate data
-						if(len(hitRecords) != 0):
-							for record in hitRecords:
-								coordinate = record['fields']['coordinates'][0].split(",")
-								string += '{"latitude":"'+str(coordinate[0])+'", "longitude":"'+str(coordinate[1])+'"},';
+					# 	hitRecords = searchResponse['hits']['hit']
+					# 	newCursor = searchResponse['hits']['cursor']
+					# 	# Get only coordinate data
+					# 	if(len(hitRecords) != 0):
+					# 		for record in hitRecords:
+					# 			coordinate = record['fields']['coordinates'][0].split(",")
+					# 			string += '{"latitude":"'+str(coordinate[0])+'", "longitude":"'+str(coordinate[1])+'"},';
 							
-						if len(string)>1:
-							string = string[:-1]
-						string += "]"
-						message = bytes(string, 'UTF-8')
-						oldFileRequest = file_requested
-						print (newCursor)
-						print (cursor)
+					# 	if len(string)>1:
+					# 		string = string[:-1]
+					# 	string += "]"
+					# 	message = bytes(string, 'UTF-8')
+					# 	oldFileRequest = file_requested
+					# 	print (newCursor)
+					# 	print (cursor)
 
-					response_headers = self._gen_headers( 200)
-					server_response = response_headers.encode()
-					server_response += message
-					# print("server_response: " + server_response.decode("UTF-8"))
-					conn.send(server_response)
-					print("Closing connection with client")
-				conn.close()
+							response_headers = self._gen_headers( 200)
+							server_response = response_headers.encode()
+							server_response += message
+							# print("server_response: " + server_response.decode("UTF-8"))
+							conn.send(server_response)
+							print("Closing connection with client")
+						conn.close()
 
 
 def graceful_shutdown(sig, dummy):
@@ -244,14 +276,17 @@ def graceful_shutdown(sig, dummy):
 signal.signal(signal.SIGINT, graceful_shutdown)
 
 while True:
-	try:
-		print ("Starting web server")
-		s = Server()
-		s.activate_server()
-	except (KeyboardInterrupt, SystemExit):
-		print("Server Terminated.")
-		break
-	except Exception:
-		pass
+	# try:
+	# 	print ("Starting web server")
+	# 	s = Server()
+	# 	s.activate_server()
+	# except (KeyboardInterrupt, SystemExit):
+	# 	print("Server Terminated.")
+	# 	break
+	# except Exception:
+	# 	pass
+	print ("Starting web server")
+	s = Server()
+	s.activate_server()
 
 
