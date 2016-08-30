@@ -175,12 +175,12 @@ class Server:
 					timeFlag = ""
 					timeFlag += searchStartTime
 					timeFlag += searchEndTime
+					timeFlag += keyword
 					print(timeFlag)
 					conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
 					cur = conndb.cursor()
 					cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,searchEndTime))
 					data = cur.fetchall()
-				# print("data: ", data)
 					cur.close()
 					conndb.commit()
 					conndb.close()
