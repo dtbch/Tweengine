@@ -29,15 +29,23 @@ class StdOutListener(StreamListener):
 
 	"""
 	def on_data(self, status):
-		data = json.loads(status)
-		if data.get('coordinates'):
-			database_store(data)
-		return True
+		try:
+			data = json.loads(status)
+			if data.get('coordinates'):
+				database_store(data)
+			return True
+		except (KeyboardInterrupt, SystemExit):
+			print("Server Terminated.")
+		except Exception as e:
+			print(e)
+		
 
 def database_store(data):
-	print(data)
+	# print(data)
 	longitude = '{:f}'.format(data.get('coordinates').get('coordinates')[0])
+	print("lon: " + longitude)
 	latitude = '{:f}'.format(data.get('coordinates').get('coordinates')[1])
+	print("lat: " + latitude)
 	times = int(int(data.get('timestamp_ms'))/1000)
 	timeToMySQL = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(times))
 	text = data.get('text')
@@ -47,6 +55,7 @@ def database_store(data):
 	cur.close()
 	conndb.commit()
 	conndb.close()
+	print (" content: " + latitude + longitude + timeToMySQL)
 	return True
 
 if __name__ == '__main__':
@@ -57,4 +66,9 @@ if __name__ == '__main__':
 
 	stream = Stream(auth, l)
 	# stream.filter(track=['basketball'])
-stream.filter(locations = [-180, -90, 180, 90])
+try:
+	stream.filter(locations = [-180, -90, 180, 90])
+except (KeyboardInterrupt, SystemExit):
+	print("Server Terminated.")
+except Exception as e:
+	print(e)

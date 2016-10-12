@@ -18,6 +18,7 @@ from urllib.request import urlopen
 server_type = 1
 oldTimeFlag = None
 flag = True
+conn_rec = None
 class Server:
 
 	
@@ -103,6 +104,7 @@ class Server:
 			print ("Awaiting New connection")
 			self.socket.listen(20)
 			conn, addr = self.socket.accept()
+			conn_rec = conn
 
 			print ("Got connection from: ", addr)
 
@@ -153,11 +155,11 @@ class Server:
 					endTime = timeRange.split(',')[1]
 					print("keyword: "+keyword+" startTime: "+startTime+" endTime: "+endTime)
 					if(startTime=="" or endTime==""):						
-						now_time = int(time.time())
+						now_time = int(time.time()) -600
 						start_time = now_time - 1
 						searchEndTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_time))
 						searchStartTime = strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))
-						if flag!=True:
+						if flag==False:
 							string = '[{"syn":"yes"}]'
 							message = bytes(string, 'UTF-8')
 							response_headers = self._gen_headers( 200)
@@ -174,44 +176,48 @@ class Server:
 						flag = False
 					timeFlag = ""
 					timeFlag += searchStartTime
-					timeFlag += searchEndTime
+					timeFlag += " " + searchEndTime
 					timeFlag += keyword
 					print(timeFlag)
-					conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
-					cur = conndb.cursor()
-					cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,searchEndTime))
-					data = cur.fetchall()
-					cur.close()
-					conndb.commit()
-					conndb.close()
-					length = len(data)
-					string = ""
-					if length>0:
-						if timeFlag!=oldTimeFlag:
-							if flag:
-								string = '[{"syn":"no"},'
-							else:
-								string = '[{"syn":"yes"},'
-
-							for i in range(0,length):
-								text = str(data[i][1]);
-								if keyword!="":
-									if keyword in text:
-										string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
-										
+					if timeFlag!=oldTimeFlag:
+						conndb = pymysql.connect(host='localhost', port=3306, user='root', passwd='111314', db='tweepy',charset='utf8mb4')
+						cur = conndb.cursor()
+						cur.execute("select * from coordinates where time>=%s and time<=%s", (searchStartTime,searchEndTime))
+						data = cur.fetchall()
+						cur.close()
+						conndb.commit()
+						conndb.close()
+						length = len(data)
+						string = ""
+						if length>0:
+								if flag:
+									string = '[{"syn":"no"},'
 								else:
-									string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
-							if len(string)>1:
-								string = string[:-1]
-							string += "]"
-							message = bytes(string, 'UTF-8')
+									string = '[{"syn":"yes"},'
+
+								for i in range(0,length):
+									text = str(data[i][1]);
+									if keyword!="":
+										if keyword in text:
+											string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
+											
+									else:
+										string += '{"latitude":"'+str(data[i][2])+'", "longitude":"'+str(data[i][3])+'"},';
+								if len(string)>1:
+									string = string[:-1]
+								string += "]"
+								message = bytes(string, 'UTF-8')
+								oldTimeFlag = timeFlag
+								response_headers = self._gen_headers( 200)
+								server_response = response_headers.encode()
+								server_response += message
+								print(string)
+								conn.send(server_response)
+						else:
+							print("No Data Match!!")
 							oldTimeFlag = timeFlag
-							response_headers = self._gen_headers( 200)
-							server_response = response_headers.encode()
-							server_response += message
-							conn.send(server_response)
-							print("Closing connection with client")
-						conn.close()
+			print("Closing connection with client")
+			conn.close()
 
 
 def graceful_shutdown(sig, dummy):
@@ -227,9 +233,8 @@ while True:
 		s = Server()
 		s.activate_server()
 	except (KeyboardInterrupt, SystemExit):
+		conn_rec.close();
 		print("Server Terminated.")
 		break
 	except Exception:
 		pass
-
-
